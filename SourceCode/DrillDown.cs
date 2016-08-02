@@ -21,15 +21,36 @@ namespace DrillChart
             public int MinimumDepth { get; set; }
             public int MaximumDepth { get; set; }
             public int SelectedCol { get; set; }
+            public int Width { get; set; }
+            public int Height { get; set; }
+        }
+        public _Error Error;
+        public class _Error
+        {
+            public List<string> Message = new List<string>();
+            public string Get()
+            {
+                return this.Message==null?"":string.Join(";", this.Message);
+            }
         }
 
-        public DrillChart(string filename, int colnum, int minimum, int maximum)
+        public DrillChart(string filename, int colnum, int minimum, int maximum, int width, int height)
         {
             Properties = new _Properties();
+            Error = new _Error();
             Properties.MinimumDepth = minimum;
             Properties.MaximumDepth = maximum;
             Properties.SelectedCol = colnum;
-            ds = CreateDataTables(filename);
+            Properties.Width = width;
+            Properties.Height = height;
+            try
+            {
+                ds = CreateDataTables(filename);
+            }
+            catch (Exception ex)
+            {
+                Error.Message.Add(ex.Message.ToString());
+            }
         }
 
         public Bitmap ShowResult()
@@ -41,42 +62,46 @@ namespace DrillChart
         private DataSet CreateDataTables(string filename)
         {
             int k = 19; /* data start row number */
-            StreamReader sr = new StreamReader(filename);
-            string line = "";
-
             DataTable dt1 = new DataTable();
-            dt1.Columns.Add("Property");
-            // read until the data header row (k) */
-            for (int i = 1; i < k; i++)
-            {
-                line = sr.ReadLine();
-                dt1.Rows.Add( line);
-            };
-
             DataTable dt2 = new DataTable();
-            // nex line is the k th line which is the header row */
-            line = sr.ReadLine();
-            // split header row with tab and create columns for datatable #2
-            foreach(string fieldName in line.Split('\t'))
-            {
-                dt2.Columns.Add(fieldName,typeof(Double));
-            }
-            this.Properties.NumFields = dt2.Columns.Count-1;
 
-            dt2.Rows.Clear();
-            while(!sr.EndOfStream)
+            using (StreamReader sr = new StreamReader(filename))
             {
-                line = sr.ReadLine();
-                int r = 0;
-                //Double[] farray = line.Split('\t').Select(s => Double.Parse(s.Replace(',','.'),CultureInfo.CurrentCulture)).ToArray();
-                DataRow row = dt2.NewRow();
-                foreach (string val in line.Split('\t'))
+                string line = "";
+
+                dt1.Columns.Add("Property");
+                // read until the data header row (k) */
+                for (int i = 1; i < k; i++)
                 {
-                    row[r] = val.Replace(',','.');
-                    r++;
+                    line = sr.ReadLine();
+                    dt1.Rows.Add(line);
+                };
+
+                // nex line is the k th line which is the header row */
+                line = sr.ReadLine();
+                // split header row with tab and create columns for datatable #2
+                foreach (string fieldName in line.Split('\t'))
+                {
+                    dt2.Columns.Add(fieldName, typeof(Double));
                 }
-                dt2.Rows.Add(row);
+                this.Properties.NumFields = dt2.Columns.Count - 1;
+
+                dt2.Rows.Clear();
+                while (!sr.EndOfStream)
+                {
+                    line = sr.ReadLine();
+                    int r = 0;
+                    //Double[] farray = line.Split('\t').Select(s => Double.Parse(s.Replace(',','.'),CultureInfo.CurrentCulture)).ToArray();
+                    DataRow row = dt2.NewRow();
+                    foreach (string val in line.Split('\t'))
+                    {
+                        row[r] = val.Replace('.', '.');
+                        r++;
+                    }
+                    dt2.Rows.Add(row);
+                }
             }
+
             DataView dv = new DataView(dt2);
             if (Properties.MinimumDepth != -1 && Properties.MaximumDepth != -1)
             {
@@ -95,8 +120,8 @@ namespace DrillChart
             Chart chart = new Chart();
             chart.DataSource = dt;
 
-            chart.Width = 500;
-            chart.Height = 500;
+            chart.Width = Properties.Width-30;
+            chart.Height = Properties.Height-30;
 
             ChartArea ca = new ChartArea();
             chart.ChartAreas.Add(ca);
@@ -115,6 +140,9 @@ namespace DrillChart
         {
             Chart chart = CreateChart();
             MemoryStream ms = new MemoryStream();
+            //rotate olunca width-height yer degistiriyor;
+            chart.Width = Properties.Height;
+            chart.Height = Properties.Width;
             chart.SaveImage(ms, ChartImageFormat.Png);
             Bitmap bmp = new Bitmap(ms);
             bmp.RotateFlip(RotateFlipType.Rotate90FlipNone);
