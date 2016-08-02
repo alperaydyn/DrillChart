@@ -22,11 +22,12 @@ namespace DrillChart
         {
             pictureBox1.Width = Width - 40;
             pictureBox1.Height = Height - 150;
+            DrawChart();
         }
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            Form1_ResizeEnd(this,e);
+            Form1_ResizeEnd(this, e);
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -56,18 +57,52 @@ namespace DrillChart
 
         private void DrawChart()
         {
-            DrillChart dc = new DrillChart(textBox1.Text, Convert.ToInt16(numericUpDown1.Value), Convert.ToInt16( (textBox2.Text==""?"-1":textBox2.Text)), Convert.ToInt16((textBox3.Text == "" ? "-1" : textBox3.Text)));
-            numericUpDown1.Maximum = dc.Properties.NumFields;
+            DrillChart dc = new DrillChart(
+                textBox1.Text, 
+                Convert.ToInt16(numericUpDown1.Value), 
+                Convert.ToInt16((textBox2.Text == "" ? "-1" : textBox2.Text)), 
+                Convert.ToInt16((textBox3.Text == "" ? "-1" : textBox3.Text)),
+                pictureBox1.Width, pictureBox1.Height
+            );
+            string dcError = dc.Error.Get();
+            if (dcError == "")
+            {
+                numericUpDown1.Maximum = dc.Properties.NumFields;
 
-            //Controls.Add(dc.CreateChart()); pictureBox1.Visible = false;
-            pictureBox1.Image = dc.CreateImage();
-            pictureBox1.BackgroundImageLayout = ImageLayout.Zoom;
+                //Controls.Add(dc.CreateChart()); pictureBox1.Visible = false;
+                pictureBox1.Image = dc.CreateImage();
+                pictureBox1.BackgroundImageLayout = ImageLayout.Zoom;
+            }
+            else
+            {
+                toolStripStatusLabel1.Text = dcError;
+            }
         }
 
         private void pictureBox1_Click(object sender, EventArgs e)
         {
             Clipboard.SetImage(pictureBox1.Image);
             toolStripStatusLabel1.Text = "Resim kopyalandı";
+        }
+
+        private void textBox2_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter) textBox3.Focus();
+        }
+
+        private void textBox3_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter) DrawChart();
+        }
+
+        private void textBox2_Enter(object sender, EventArgs e)
+        {
+            textBox2.SelectAll();
+        }
+
+        private void textBox3_Enter(object sender, EventArgs e)
+        {
+            textBox3.SelectAll();
         }
     }
 }
